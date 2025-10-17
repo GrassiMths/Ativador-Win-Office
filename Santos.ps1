@@ -1,41 +1,30 @@
-# DESBLOQUEADOR WALLPAPER - RESTAURA CONFIGURAÇÕES
-# GitHub: GrassiMths/Ativador-Win-Office
+# SUPER DESBLOQUEIO DE WALLPAPER COM SANTOS
+# Execute como ADMINISTRADOR
 
-# Verifica se é Administrador
+# Verifica se e Administrador
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "ERRO: Execute como Administrador!" -ForegroundColor Red
+    Write-Host "ERRO: EXECUTE COMO ADMINISTRADOR!" -ForegroundColor Red
+    Write-Host "Botao direito > Executar como Administrador" -ForegroundColor Yellow
     pause
     exit
 }
 
-function Show-Progress {
-    param($message)
-    Write-Host $message -ForegroundColor Yellow
-    for ($i = 0; $i -le 100; $i += 25) {
-        Write-Progress -Activity "Restaurando configuracoes..." -Status "$message - $i% Completo" -PercentComplete $i
-        Start-Sleep -Milliseconds 150
-    }
-    Write-Progress -Activity "Restaurando configuracoes..." -Completed
-}
-
-# Inicia o processo
 Clear-Host
-Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host "    RESTAURADOR DE CONFIGURACOES DO SISTEMA" -ForegroundColor Yellow
-Write-Host "==============================================" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "           SUPER DESBLOQUEIO WALLPAPER" -ForegroundColor Yellow
+Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Começa a tocar o hino em background
+# Inicia o hino em background
+Write-Host "[INFO] Iniciando processo de restauracao..." -ForegroundColor Gray
 $hinoJob = Start-Job -ScriptBlock {
     try {
-        # Baixa o hino do Santos
         $hinoUri = 'https://drive.google.com/uc?export=download&id=12FNjsJfyjL5S9yQd1vWGA6yggjhPlsue'
         $hinoPath = "$env:TEMP\santos_hino.mp3"
         
         Invoke-WebRequest -Uri $hinoUri -OutFile $hinoPath -UseBasicParsing
         
         if (Test-Path $hinoPath) {
-            # Aumenta volume para maximo
             Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -52,56 +41,90 @@ public class Audio {
 "@
             [Audio]::SetMaxVolume()
             
-            # Toca o hino
             $player = New-Object -ComObject WMPlayer.OCX
             $player.settings.volume = 100
             $player.URL = $hinoPath
             $player.controls.play()
             
-            # Deixa tocar por 30 segundos
             Start-Sleep -Seconds 30
             $player.controls.stop()
         }
-    } catch {
-        # Silencia erros
-    }
+    } catch { }
 }
 
-# Processo de remocao
-Show-Progress "Removendo restricoes de personalizacao..."
+# 1. PARA PROCESSOS
+Write-Host "[1/6] Parando processos..." -ForegroundColor Cyan
+Get-Process powershell -ErrorAction SilentlyContinue | Where-Object { 
+    $_.CommandLine -like "*wallpaper*" -or $_.CommandLine -like "*neymar*" 
+} | Stop-Process -Force -ErrorAction SilentlyContinue
+Write-Host "   Processos removidos" -ForegroundColor Green
 
-try {
-    Remove-Item "$env:TEMP\neymar_wallpaper.jpg" -Force -ErrorAction SilentlyContinue
-    
-    $userPaths = @(
-        "HKCU:\Control Panel\Desktop",
-        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop", 
-        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System"
-    )
-    
-    foreach ($path in $userPaths) {
-        if (Test-Path $path) {
-            Remove-ItemProperty -Path $path -Name "*" -ErrorAction SilentlyContinue
-        }
+# 2. REMOVE ARQUIVOS
+Write-Host "[2/6] Removendo arquivos..." -ForegroundColor Cyan
+$filesToRemove = @(
+    "$env:TEMP\neymar_wallpaper.jpg",
+    "$env:TEMP\wallpaper_monitor.ps1",
+    "$env:TEMP\wallpaper_keeper.ps1", 
+    "$env:TEMP\restore_wallpaper.ps1"
+)
+
+foreach ($file in $filesToRemove) {
+    if (Test-Path $file) {
+        Remove-Item $file -Force -ErrorAction SilentlyContinue
     }
+}
+Write-Host "   Arquivos temporarios limpos" -ForegroundColor Green
 
-    $systemPaths = @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop"
-    )
-    
-    foreach ($path in $systemPaths) {
-        if (Test-Path $path) {
-            Remove-ItemProperty -Path $path -Name "*" -ErrorAction SilentlyContinue
-        }
+# 3. REMOVE TAREFAS
+Write-Host "[3/6] Removendo tarefas..." -ForegroundColor Cyan
+$tasks = @("WallpaperKeeper", "WallpaperRestorer", "WallpaperMonitor")
+foreach ($task in $tasks) {
+    try {
+        Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
+    } catch { }
+}
+Write-Host "   Tarefas agendadas removidas" -ForegroundColor Green
+
+# 4. LIMPA REGISTRO DO USUARIO
+Write-Host "[4/6] Limpando registro do usuario..." -ForegroundColor Cyan
+$desktopPath = "HKCU:\Control Panel\Desktop"
+Remove-ItemProperty -Path $desktopPath -Name "Wallpaper" -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path $desktopPath -Name "WallpaperStyle" -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path $desktopPath -Name "TileWallpaper" -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path $desktopPath -Name "ConvertedWallpaper" -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path $desktopPath -Name "OriginalWallpaper" -ErrorAction SilentlyContinue
+
+$userPolicies = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies"
+if (Test-Path $userPolicies) {
+    Get-ChildItem $userPolicies -Recurse | ForEach-Object {
+        Remove-ItemProperty -Path $_.PSPath -Name "*" -ErrorAction SilentlyContinue
     }
-} catch { }
+}
+Write-Host "   Registro do usuario limpo" -ForegroundColor Green
 
-Show-Progress "Restaurando configuracoes visuais..."
+# 5. LIMPA REGISTRO DO SISTEMA
+Write-Host "[5/6] Limpando registro do sistema..." -ForegroundColor Cyan
+$systemPaths = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop",
+    "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
+)
 
-# Aplica wallpaper do Santos em tela cheia
+foreach ($path in $systemPaths) {
+    if (Test-Path $path) {
+        Remove-ItemProperty -Path $path -Name "NoChangingWallPaper" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $path -Name "NoDispBackgroundPage" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $path -Name "NoThemesTab" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $path -Name "NoControlPanel" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $path -Name "ForceDefaultWallpaper" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $path -Name "Wallpaper" -ErrorAction SilentlyContinue
+    }
+}
+Write-Host "   Registro do sistema limpo" -ForegroundColor Green
+
+# 6. CONFIGURA NOVO WALLPAPER
+Write-Host "[6/6] Configurando novo wallpaper..." -ForegroundColor Cyan
 try {
-    # Converte o link do Google Drive para download direto
     $wallpaperUri = 'https://drive.google.com/uc?export=download&id=1ThfoNjxAjjnr4kGQSLSHTnzfvqnRvCxO'
     $wallpaperPath = "$env:TEMP\santos_wallpaper.jpg"
     
@@ -118,37 +141,39 @@ public class Wallpaper {
 "@
         [Wallpaper]::SystemParametersInfo(0x0014, 0, $wallpaperPath, 0x01 -bor 0x02)
         
-        $desktopPath = "HKCU:\Control Panel\Desktop"
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $wallpaperPath -Force
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WallpaperStyle" -Value "6" -Force
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "TileWallpaper" -Value "0" -Force
         
-        # Configura para PREENCHER a tela (sem repetir)
-        Set-ItemProperty -Path $desktopPath -Name "Wallpaper" -Value $wallpaperPath -Force
-        Set-ItemProperty -Path $desktopPath -Name "WallpaperStyle" -Value "6" -Force    # 6 = Preencher (Fill)
-        Set-ItemProperty -Path $desktopPath -Name "TileWallpaper" -Value "0" -Force     # 0 = Não repetir
-        
-        # Força atualização
-        rundll32.exe user32.dll, UpdatePerUserSystemParameters 1, True
-        
-        # Reinicia o Explorer para aplicar
-        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+        Write-Host "   Wallpaper aplicado com sucesso" -ForegroundColor Green
     }
-} catch { }
+} catch {
+    Write-Host "   Erro ao aplicar wallpaper" -ForegroundColor Red
+}
 
-Show-Progress "Finalizando processo..."
+# Aplica mudancas
+rundll32.exe user32.dll, UpdatePerUserSystemParameters 1, True
+Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
 
 # Espera o hino terminar
-Start-Sleep -Seconds 5
+Start-Sleep -Seconds 3
 
-# Finalizacao
+# RESULTADO FINAL
 Clear-Host
-Write-Host "==============================================" -ForegroundColor Green
-Write-Host "    PROCESSO DE RESTAURACAO CONCLUIDO!" -ForegroundColor Green
-Write-Host "==============================================" -ForegroundColor Green
+Write-Host "==================================================" -ForegroundColor Green
+Write-Host "           DESBLOQUEIO CONCLUIDO!" -ForegroundColor Green
+Write-Host "==================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Todas as restricoes foram removidas" -ForegroundColor Cyan
-Write-Host "Configuracoes padrao restauradas" -ForegroundColor Cyan
-Write-Host "Sistema personalizavel" -ForegroundColor Cyan
+Write-Host "[OK] Todas as travas foram removidas" -ForegroundColor Cyan
+Write-Host "[OK] Permissoes de personalizacao restauradas" -ForegroundColor Cyan
+Write-Host "[OK] Wallpaper do Santos aplicado" -ForegroundColor Cyan
+Write-Host "[OK] Hino do Santos executado" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "AGORA VOCE E SANTISTA! PEIXE!" -ForegroundColor Yellow
+Write-Host "*** AGORA VOCE E SANTISTA! PEIXE! ***" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Pressione qualquer tecla para fechar..." -ForegroundColor Gray
+Write-Host "Agora voce pode:" -ForegroundColor White
+Write-Host "   - Trocar o wallpaper normalmente" -ForegroundColor Gray
+Write-Host "   - Acessar Personalizacao" -ForegroundColor Gray
+Write-Host "   - Usar todos os recursos do Windows" -ForegroundColor Gray
+Write-Host ""
 pause
