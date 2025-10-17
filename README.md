@@ -116,6 +116,5 @@ Este projeto é disponibilizado apenas para fins educacionais e humorísticos. U
 
 **Feito por Grassi.mths** 🎉
 
-*"Diversão com responsabilidade!"* 😄
 
 </div>
