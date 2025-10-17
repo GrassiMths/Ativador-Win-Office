@@ -1,4 +1,4 @@
-# 🎮 Ativador Windows & Office - Prank Humorístico
+# 🎮 Ativador Fake do Windows & Office
 
 <div align="center">
 
